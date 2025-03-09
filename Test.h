@@ -56,16 +56,24 @@ namespace TDD
 
         bool passed() const { return mPassed; }
 
+        std::string_view expectedReason() const { return mExpectedReason; }
+
         void setFailed(std::string_view reason)
         {
             mPassed = false;
             mReason = reason;
         }
 
+        void setExpectedFailureReason(std::string_view reason)
+        {
+            mExpectedReason = reason;
+        }
+
     private:
+        bool mPassed;
         std::string mName;
         std::string mReason;
-        bool mPassed;
+        std::string mExpectedReason;
     };
 
     inline void setOutStream(std::ostream &os)
@@ -81,7 +89,7 @@ namespace TDD
 
     inline void summaryTests(const int &testsPassed, const int &testsFailed)
     {
-        (*outStream) << "\n-------------------------" << std::endl;
+        (*outStream) << "-------------------------" << std::endl;
         if (testsFailed == 0)
         {
             (*outStream) << "All tests passed." << std::endl;
@@ -101,7 +109,7 @@ namespace TDD
                      << " tests\n";
         for (auto *test : TDD::getTests())
         {
-            (*outStream) << "--------\n"
+            (*outStream) << "-------------------------\n"
                          << test->name() << std::endl;
             try
             {
@@ -123,10 +131,16 @@ namespace TDD
                 testsPassed++;
                 (*outStream) << "Passed" << std::endl;
             }
+            else if (not test->expectedReason().empty() && test->expectedReason() == test->reason())
+            {
+                testsPassed++;
+                (*outStream) << "Expected failure\n"
+                             << test->reason() << std::endl;
+            }
             else
             {
                 testsFailed++;
-                (*outStream) << "Failed" << std::endl
+                (*outStream) << "Failed\n"
                              << test->reason() << std::endl;
             }
         }
