@@ -35,7 +35,7 @@ namespace TDD
 
         std::string_view reason() const { return mReason; }
 
-        bool passed() { return mPassed; }
+        bool passed() const { return mPassed; }
 
         void setFailed(std::string_view reason)
         {
@@ -44,8 +44,8 @@ namespace TDD
         }
 
     public:
-        std::string_view mName;
-        std::string_view mReason;
+        std::string mName;
+        std::string mReason;
         bool mPassed;
     };
 
@@ -60,8 +60,7 @@ namespace TDD
         for (auto *test : TDD::getTests())
         {
             std::cout << "--------\n"
-                      << test->name()
-                      << std::endl;
+                      << test->name() << std::endl;
             try
             {
                 test->run();
@@ -72,14 +71,12 @@ namespace TDD
             }
             if (test->passed())
             {
-                std::cout << "Passed"
-                          << std::endl;
+                std::cout << "Passed" << std::endl;
             }
             else
             {
-                std::cout << "Failed"
-                          << test->reason()
-                          << std::endl;
+                std::cout << "Failed" << std::endl
+                          << test->reason() << std::endl;
             }
         }
     }
