@@ -16,12 +16,15 @@
 #define TDD_INSTANCE TDD_INSTANCE_RELAY(__LINE__)
 
 #include <string_view>
-#include <string>
+#include <ostream>
 #include <vector>
 #include <iostream>
 
 namespace TDD
 {
+    static std::ostream *outStream = &std::cout;
+    // default
+
     class TestBase
     {
     public:
@@ -43,7 +46,7 @@ namespace TDD
             mReason = reason;
         }
 
-    public:
+    private:
         std::string mName;
         std::string mReason;
         bool mPassed;
@@ -55,30 +58,35 @@ namespace TDD
         return tests;
     }
 
+    inline void setOutStream(std::ostream &os)
+    {
+        outStream = &os;
+    }
+
     inline void summaryTests(const int &testsPassed, const int &testsFailed)
     {
-        std::cout << "\n-------------------------" << std::endl;
+        (*outStream) << "\n-------------------------" << std::endl;
         if (testsFailed == 0)
         {
-            std::cout << "All tests passed." << std::endl;
+            (*outStream) << "All tests passed." << std::endl;
         }
         else
         {
-            std::cout << "Tests passed: " << testsPassed
-                      << "\nTests failed: " << testsFailed
-                      << std::endl;
+            (*outStream) << "Tests passed: " << testsPassed
+                         << "\nTests failed: " << testsFailed
+                         << std::endl;
         }
     }
 
     inline void runTests()
     {
         int testsPassed = 0, testsFailed = 0;
-        std::cout << "Running " << getTests().size()
-                  << " tests\n";
+        (*outStream) << "Running " << getTests().size()
+                     << " tests\n";
         for (auto *test : TDD::getTests())
         {
-            std::cout << "--------\n"
-                      << test->name() << std::endl;
+            (*outStream) << "--------\n"
+                         << test->name() << std::endl;
             try
             {
                 test->run();
@@ -90,13 +98,13 @@ namespace TDD
             if (test->passed())
             {
                 testsPassed++;
-                std::cout << "Passed" << std::endl;
+                (*outStream) << "Passed" << std::endl;
             }
             else
             {
                 testsFailed++;
-                std::cout << "Failed" << std::endl
-                          << test->reason() << std::endl;
+                (*outStream) << "Failed" << std::endl
+                             << test->reason() << std::endl;
             }
         }
         summaryTests(testsPassed, testsFailed);
