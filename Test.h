@@ -219,41 +219,47 @@ namespace TDD
     }
 } // namespace TDD
 
-#define TEST_EX(testName, exceptionType)                  \
-    class TDD_CLASS : public TDD::TestBase                \
-    {                                                     \
-    public:                                               \
-        TDD_CLASS(std::string_view name) : TestBase(name) \
-        {                                                 \
-            TDD::getTests().push_back(this);              \
-        } /* The Test constructor register itself. */     \
-        void runEx() override                             \
-        {                                                 \
-            try                                           \
-            {                                             \
-                run();                                    \
-            }                                             \
-            catch (exceptionType const &)                 \
-            {                                             \
-                return;                                   \
-            }                                             \
-            throw TDD::MissingException(#exceptionType);  \
-        }                                                 \
-        void run() override;                              \
-    };                                                    \
-    TDD_CLASS TDD_INSTANCE(testName);                     \
+#define TEST_EX(testName, exceptionType)                      \
+    namespace                                                 \
+    {                                                         \
+        class TDD_CLASS : public TDD::TestBase                \
+        {                                                     \
+        public:                                               \
+            TDD_CLASS(std::string_view name) : TestBase(name) \
+            {                                                 \
+                TDD::getTests().push_back(this);              \
+            } /* The Test constructor register itself. */     \
+            void runEx() override                             \
+            {                                                 \
+                try                                           \
+                {                                             \
+                    run();                                    \
+                }                                             \
+                catch (exceptionType const &)                 \
+                {                                             \
+                    return;                                   \
+                }                                             \
+                throw TDD::MissingException(#exceptionType);  \
+            }                                                 \
+            void run() override;                              \
+        };                                                    \
+    } /* end of unamed namespace */                           \
+    TDD_CLASS TDD_INSTANCE(testName);                         \
     void TDD_CLASS::run()
 
-#define TEST(testName)                                    \
-    class TDD_CLASS : public TDD::TestBase                \
-    {                                                     \
-    public:                                               \
-        TDD_CLASS(std::string_view name) : TestBase(name) \
-        {                                                 \
-            TDD::getTests().push_back(this);              \
-        } /* The Test constructor register itself. */     \
-        void run() override;                              \
-    };                                                    \
-    TDD_CLASS TDD_INSTANCE(testName);                     \
+#define TEST(testName)                                        \
+    namespace                                                 \
+    {                                                         \
+        class TDD_CLASS : public TDD::TestBase                \
+        {                                                     \
+        public:                                               \
+            TDD_CLASS(std::string_view name) : TestBase(name) \
+            {                                                 \
+                TDD::getTests().push_back(this);              \
+            } /* The Test constructor register itself. */     \
+            void run() override;                              \
+        };                                                    \
+    } /* end of unamed namespace */                           \
+    TDD_CLASS TDD_INSTANCE(testName);                         \
     void TDD_CLASS::run()
 #endif // TDD_TEST_H"

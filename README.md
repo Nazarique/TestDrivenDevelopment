@@ -4,7 +4,6 @@
 
 
 ## Desired Test Declaration
-Main topics:
 * What do we want tests to do dor us?
 * What should a test look like?
 * What information does a test need?
@@ -12,14 +11,17 @@ Main topics:
 * How will the first test be used?
 
 ## Test Results
-Main topics:
 * Reporting a single test result based on exceptions.
 * Enhancing the test library to support multiple tests.
 * Summarizing the test results to clearly see what failed and what passed.
 * Redirecting the test result so the output can gon to any stream.
 
 ## Test Results
-Main topics>:
 * How build failures come first and should be seen as part of the process.
 * Why you should write only enough code to pass your tests.
 * How to enhance a test and get another pass.
+
+## Adding Tests to a Project
+* How to detect whether a test passes or fails.
+* Enhancing the testing library to support confirmations.
+* Should error cases be tested, too?
