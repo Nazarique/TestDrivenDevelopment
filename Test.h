@@ -34,6 +34,11 @@ namespace TDD
 
         virtual void run() = 0;
 
+        virtual void runEx()
+        {
+            run();
+        }
+
         std::string_view name() const { return mName; }
 
         std::string_view reason() const { return mReason; }
@@ -89,7 +94,7 @@ namespace TDD
                          << test->name() << std::endl;
             try
             {
-                test->run();
+                test->runEx();
             }
             catch (...)
             {

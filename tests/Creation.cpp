@@ -3,7 +3,8 @@
 TEST("Test can be created")
 {
 }
-TEST("Test with throw can be created")
+
+TEST_EX("Test with throw can be created", int)
 {
     throw 1;
 }
