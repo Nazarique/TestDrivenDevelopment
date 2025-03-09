@@ -55,8 +55,26 @@ namespace TDD
         return tests;
     }
 
+    inline void summaryTests(const int &testsPassed, const int &testsFailed)
+    {
+        std::cout << "\n-------------------------" << std::endl;
+        if (testsFailed == 0)
+        {
+            std::cout << "All tests passed." << std::endl;
+        }
+        else
+        {
+            std::cout << "Tests passed: " << testsPassed
+                      << "\nTests failed: " << testsFailed
+                      << std::endl;
+        }
+    }
+
     inline void runTests()
     {
+        int testsPassed = 0, testsFailed = 0;
+        std::cout << "Running " << getTests().size()
+                  << " tests\n";
         for (auto *test : TDD::getTests())
         {
             std::cout << "--------\n"
@@ -71,14 +89,17 @@ namespace TDD
             }
             if (test->passed())
             {
+                testsPassed++;
                 std::cout << "Passed" << std::endl;
             }
             else
             {
+                testsFailed++;
                 std::cout << "Failed" << std::endl
                           << test->reason() << std::endl;
             }
         }
+        summaryTests(testsPassed, testsFailed);
     }
 } // namespace TDD
 
