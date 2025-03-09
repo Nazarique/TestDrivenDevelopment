@@ -3,7 +3,6 @@
 
 #include <vector>
 #include <string_view>
-#include <iostream>
 
 namespace TDD
 {
@@ -13,12 +12,12 @@ namespace TDD
             virtual void run() = 0;
     };
 
-    std::vector<TestInterface *> & getTests() {
+    inline std::vector<TestInterface *> & getTests() {
         static std::vector<TestInterface *> tests;
         return tests;
     }
 
-    void runTests() {
+    inline void runTests() {
         for (auto * test: TDD::getTests()) {
             test->run();
         }
