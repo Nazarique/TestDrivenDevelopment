@@ -8,3 +8,7 @@ TEST_EX("Test with throw can be created", int)
 {
     throw 1;
 }
+
+TEST_EX("Test that never throws can be created", int)
+{
+}
