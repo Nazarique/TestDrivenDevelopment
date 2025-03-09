@@ -17,3 +17,9 @@ Main topics:
 * Enhancing the test library to support multiple tests.
 * Summarizing the test results to clearly see what failed and what passed.
 * Redirecting the test result so the output can gon to any stream.
+
+## Test Results
+Main topics>:
+* How build failures come first and should be seen as part of the process.
+* Why you should write only enough code to pass your tests.
+* How to enhance a test and get another pass.
