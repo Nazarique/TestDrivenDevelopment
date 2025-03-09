@@ -25,6 +25,17 @@ namespace TDD
     static std::ostream *outStream = &std::cout;
     // default
 
+    class MissingException
+    {
+    public:
+        MissingException(std::string_view exType) : mExType(exType) {}
+
+        std::string_view exType() const { return mExType; }
+
+    private:
+        std::string mExType;
+    };
+
     class TestBase
     {
     public:
@@ -34,11 +45,18 @@ namespace TDD
 
         virtual void run() = 0;
 
+        virtual void runEx()
+        {
+            run();
+        }
+
         std::string_view name() const { return mName; }
 
         std::string_view reason() const { return mReason; }
 
         bool passed() const { return mPassed; }
+
+        std::string_view expectedReason() const { return mExpectedReason; }
 
         void setFailed(std::string_view reason)
         {
@@ -46,11 +64,22 @@ namespace TDD
             mReason = reason;
         }
 
+        void setExpectedFailureReason(std::string_view reason)
+        {
+            mExpectedReason = reason;
+        }
+
     private:
+        bool mPassed;
         std::string mName;
         std::string mReason;
-        bool mPassed;
+        std::string mExpectedReason;
     };
+
+    inline void setOutStream(std::ostream &os)
+    {
+        outStream = &os;
+    }
 
     inline std::vector<TestBase *> &getTests()
     {
@@ -58,14 +87,9 @@ namespace TDD
         return tests;
     }
 
-    inline void setOutStream(std::ostream &os)
-    {
-        outStream = &os;
-    }
-
     inline void summaryTests(const int &testsPassed, const int &testsFailed)
     {
-        (*outStream) << "\n-------------------------" << std::endl;
+        (*outStream) << "-------------------------" << std::endl;
         if (testsFailed == 0)
         {
             (*outStream) << "All tests passed." << std::endl;
@@ -85,11 +109,18 @@ namespace TDD
                      << " tests\n";
         for (auto *test : TDD::getTests())
         {
-            (*outStream) << "--------\n"
+            (*outStream) << "-------------------------\n"
                          << test->name() << std::endl;
             try
             {
-                test->run();
+                test->runEx();
+            }
+            catch (MissingException const &ex)
+            {
+                std::string message = "Expected exception type: ";
+                message += ex.exType();
+                message += " was not thrown.";
+                test->setFailed(message);
             }
             catch (...)
             {
@@ -100,10 +131,16 @@ namespace TDD
                 testsPassed++;
                 (*outStream) << "Passed" << std::endl;
             }
+            else if (not test->expectedReason().empty() && test->expectedReason() == test->reason())
+            {
+                testsPassed++;
+                (*outStream) << "Expected failure\n"
+                             << test->reason() << std::endl;
+            }
             else
             {
                 testsFailed++;
-                (*outStream) << "Failed" << std::endl
+                (*outStream) << "Failed\n"
                              << test->reason() << std::endl;
             }
         }
@@ -125,9 +162,11 @@ namespace TDD
             {                                             \
                 run();                                    \
             }                                             \
-            catch (const exceptionType &)                 \
+            catch (exceptionType const &)                 \
             {                                             \
+                return;                                   \
             }                                             \
+            throw TDD::MissingException(#exceptionType);  \
         }                                                 \
         void run() override;                              \
     };                                                    \
