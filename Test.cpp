@@ -6,7 +6,8 @@ TEST
 }
 
 int main(int argc, const char** argv) {
-
-    test();
+    for (auto * test: TDD::getTests()) {
+        test->run();
+    }
     return 0;
 }
