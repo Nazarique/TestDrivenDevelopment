@@ -56,7 +56,7 @@ namespace TDD
         void formatReason()
         {
             mReason += "    Expected: " + mExpected + "\n";
-            mReason += "    Actual: " + mActual;
+            mReason += "    Actual  : " + mActual;
         }
         int mLine;
         std::string mExpected;
@@ -287,7 +287,7 @@ namespace TDD
         return tests;
     }
 
-    inline void confirm(bool expected, bool actual, int line)
+    inline void confirm(bool const &expected, bool const &actual, int const &line)
     {
         if (actual != expected)
         {
@@ -296,7 +296,7 @@ namespace TDD
     }
 
     // overloaded to string_view
-    inline void confirm(std::string_view expected, std::string_view actual, int line)
+    inline void confirm(std::string_view expected, std::string_view actual, int const &line)
     {
         if (actual != expected)
         {
@@ -305,13 +305,43 @@ namespace TDD
     }
 
     // overloaded to strings
-    inline void confirm(std::string const &expected, std::string const &actual, int line)
+    inline void confirm(std::string const &expected, std::string const &actual, int const &line)
     {
         confirm(std::string_view(expected), std::string_view(actual), line);
     }
 
+    // overloaded to float
+    inline void confirm(float const &expected, float const &actual, int const &line)
+    {
+        if (actual < (expected - 0.0001f) ||
+            actual > (expected + 0.0001f))
+        {
+            throw TDD::ActualConfirmException(std::to_string(expected), std::to_string(actual), line);
+        }
+    }
+
+    // overloaded to double
+    inline void confirm(double const &expected, double const &actual, int const &line)
+    {
+        if (actual < (expected - 0.000001f) ||
+            actual > (expected + 0.000001f))
+        {
+            throw TDD::ActualConfirmException(std::to_string(expected), std::to_string(actual), line);
+        }
+    }
+
+    // overloaded to long double
+    inline void confirm(long double const &expected, long double const &actual, int const &line)
+    {
+        if (actual < (expected - 0.000001) ||
+            actual > (expected + 0.000001))
+        {
+            throw TDD::ActualConfirmException(std::to_string(expected), std::to_string(actual), line);
+        }
+    }
+
     template <typename T>
-    inline void confirm(T const &expected, T const &actual, int line)
+    void confirm(T const &expected, T const &actual, int const &line)
     {
         if (actual != expected)
         {
