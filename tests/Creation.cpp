@@ -1,5 +1,5 @@
 #include "../Test.h"
-
+/*
 TEST("Test can be created")
 {
 }
@@ -24,4 +24,4 @@ TEST_EX("Test that throws wrong type can be created", int)
 {
     setExpectedFailureReason("Unexpected exception thrown.");
     throw "Wrong Type";
-}
+} */

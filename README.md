@@ -35,3 +35,7 @@
 * Confirming floating-point values.
 * How to write confirms.
 
+## Test Setup and Teardown
+* Supporting test setup ans teardown
+* Enhancing test setup ans teardown for multiple tests
+* Handling errors in setup and teardown

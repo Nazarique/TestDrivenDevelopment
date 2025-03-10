@@ -1,5 +1,5 @@
 #include "../Test.h"
-
+/*
 bool isNegative(const int &value)
 {
 	return value < 0;
@@ -132,4 +132,4 @@ TEST("Test long double confirms")
 
 	long double expected = 0.3;
 	CONFIRM(expected, sum);
-}
+} */

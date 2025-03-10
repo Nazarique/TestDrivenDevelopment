@@ -300,6 +300,21 @@ namespace TDD
         }
     };
 
+    template <typename T>
+    class SetupAndTeardown : public T
+    {
+
+    public:
+        SetupAndTeardown(/* args */)
+        {
+            T::setup();
+        }
+        ~SetupAndTeardown()
+        {
+            T::teardown();
+        }
+    };
+
     inline void setOutStream(std::ostream &os)
     {
         outStream = &os;
