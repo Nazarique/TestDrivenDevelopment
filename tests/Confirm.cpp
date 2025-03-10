@@ -17,13 +17,8 @@ TEST("Test will pass without any confirms")
 TEST("Test passing grades")
 {
     bool result = isPassingGrade(0);
-    if (result)
-    {
-        throw TDD::BoolConfirmException(false, 22);
-    }
+    CONFIRM_FALSE(result);
+
     result = isPassingGrade(100);
-    if (result)
-    {
-        throw TDD::BoolConfirmException(true, 27);
-    }
+    CONFIRM_TRUE(result);
 }

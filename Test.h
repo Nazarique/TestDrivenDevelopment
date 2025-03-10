@@ -42,7 +42,7 @@ namespace TDD
     public:
         BoolConfirmException(bool expected, int line)
         {
-            mReason = "Confirm failed on line \n";
+            mReason = "Confirm failed on line ";
             mReason += std::to_string(line) + "\n";
             mReason += "    Expected: ";
             mReason += expected ? "true" : "false";
@@ -253,6 +253,18 @@ namespace TDD
         TestRunner::runAllTests(getTests());
     }
 } // namespace TDD
+
+#define CONFIRM_FALSE(actual)                             \
+    if (actual)                                           \
+    {                                                     \
+        throw TDD::BoolConfirmException(false, __LINE__); \
+    }
+
+#define CONFIRM_TRUE(actual)                             \
+    if (actual)                                          \
+    {                                                    \
+        throw TDD::BoolConfirmException(true, __LINE__); \
+    }
 
 #define TEST_EX(testName, exceptionType)                      \
     namespace                                                 \
