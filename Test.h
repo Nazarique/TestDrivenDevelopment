@@ -24,6 +24,31 @@ namespace TDD
 
     static std::ostream *outStream = &std::cout; // default
 
+    class ConfirmException
+    {
+    public:
+        ConfirmException() = default;
+        virtual ~ConfirmException() = default;
+        std::string_view reason() const { return mReason; }
+
+    protected:
+        std::string mReason;
+    };
+
+    class BoolConfirmException : public ConfirmException
+    {
+    private:
+        /* data */
+    public:
+        BoolConfirmException(bool expected, int line)
+        {
+            mReason = "Confirm failed on line \n";
+            mReason += std::to_string(line) + "\n";
+            mReason += "    Expected: ";
+            mReason += expected ? "true" : "false";
+        }
+    };
+
     class MissingException
     {
     public:
@@ -120,10 +145,16 @@ namespace TDD
 
         static void handleMissingException(TestBase *test, const MissingException &ex)
         {
-            std::string message = "Expected exception type: ";
+            // Expected exception type int was not thrown
+            std::string message = "Expected exception type ";
             message += ex.exceptionType();
             message += " was not thrown.";
             test->setFailed(message);
+        }
+
+        static void handleConfirmException(TestBase *test, const ConfirmException &ex)
+        {
+            test->setFailed(ex.reason());
         }
 
         static void handleUnexpectedException(TestBase *test)
@@ -137,6 +168,10 @@ namespace TDD
             {
                 test->runEx();
             }
+            catch (const ConfirmException &ex)
+            {
+                handleConfirmException(test, ex);
+            }
             catch (const MissingException &ex)
             {
                 handleMissingException(test, ex);
@@ -149,12 +184,12 @@ namespace TDD
 
         static bool isExpectedFailure(const TestBase *test)
         {
-            return !test->expectedReason().empty() && test->expectedReason() == test->reason();
+            return (not test->expectedReason().empty()) && test->expectedReason() == test->reason();
         }
 
         static bool isMissedExpectedFailure(const TestBase *test)
         {
-            return !test->expectedReason().empty() && test->passed();
+            return not test->expectedReason().empty();
         }
 
         static void verifyPassedTest(const TestBase *test, TestCounters &counters)
