@@ -8,21 +8,19 @@
 
 namespace TDD
 {
-    // These macros generate unique names for tests using the line number:
-    // 1. A class name, like Test7 if the TEST macro is on line 7.
-    // 2. An instance name, like test7_inst.
-    //
-    // This ensures each test has a unique name, allowing multiple tests in the same file.
-
-#define TDD_CLASS_FINAL(line) Test##line
-#define TDD_CLASS_RELAY(line) TDD_CLASS_FINAL(line)
-#define TDD_CLASS TDD_CLASS_RELAY(__LINE__)
-
-#define TDD_INSTANCE_FINAL(line) test##line##_inst
-#define TDD_INSTANCE_RELAY(line) TDD_INSTANCE_FINAL(line)
-#define TDD_INSTANCE TDD_INSTANCE_RELAY(__LINE__)
-
     static std::ostream *outStream = &std::cout; // default
+
+    // Forward declarations
+    class ConfirmException;
+    class ActualConfirmException;
+    class BoolConfirmException;
+    class MissingException;
+    class TestBase;
+    class TestRunner;
+
+    inline void setOutStream(std::ostream &os);
+    inline std::vector<TestBase *> &getTests();
+    inline void runTests();
 
     class ConfirmException
     {
@@ -89,8 +87,10 @@ namespace TDD
     public:
         TestBase(std::string_view name)
             : mName(name),
-              mPassed(true),
-              mConfirmLocation(-1) {}
+              mPassed(true), mConfirmLocation(-1)
+        {
+            getTests().push_back(this);
+        }
 
         virtual ~TestBase() = default;
 
@@ -129,6 +129,30 @@ namespace TDD
         std::string mName;
         std::string mReason;
         std::string mExpectedReason;
+    };
+
+    template <typename ExceptionT>
+    class TestExBase : public TestBase
+    {
+    public:
+        TestExBase(std::string_view name, std::string_view exceptionName)
+            : TestBase(name), mExceptionName(exceptionName) {}
+
+        void runEx() override
+        {
+            try
+            {
+                run();
+            }
+            catch (ExceptionT const &)
+            {
+                return;
+            }
+            throw MissingException(mExceptionName);
+        }
+
+    private:
+        std::string_view mExceptionName;
     };
 
     class TestRunner
@@ -284,10 +308,16 @@ namespace TDD
     inline std::vector<TestBase *> &getTests()
     {
         static std::vector<TestBase *> tests;
+
         return tests;
     }
 
-    inline void confirm(bool const &expected, bool const &actual, int const &line)
+    inline void runTests()
+    {
+        TestRunner::runAllTests(getTests());
+    }
+
+    inline void confirm(bool expected, bool actual, int line)
     {
         if (actual != expected)
         {
@@ -296,7 +326,7 @@ namespace TDD
     }
 
     // overloaded to string_view
-    inline void confirm(std::string_view expected, std::string_view actual, int const &line)
+    inline void confirm(std::string_view expected, std::string_view actual, int line)
     {
         if (actual != expected)
         {
@@ -305,13 +335,13 @@ namespace TDD
     }
 
     // overloaded to strings
-    inline void confirm(std::string const &expected, std::string const &actual, int const &line)
+    inline void confirm(std::string const &expected, std::string const &actual, int line)
     {
         confirm(std::string_view(expected), std::string_view(actual), line);
     }
 
     // overloaded to float
-    inline void confirm(float const &expected, float const &actual, int const &line)
+    inline void confirm(float expected, float actual, int line)
     {
         if (actual < (expected - 0.0001f) ||
             actual > (expected + 0.0001f))
@@ -321,7 +351,7 @@ namespace TDD
     }
 
     // overloaded to double
-    inline void confirm(double const &expected, double const &actual, int const &line)
+    inline void confirm(double expected, double actual, int line)
     {
         if (actual < (expected - 0.000001f) ||
             actual > (expected + 0.000001f))
@@ -331,7 +361,7 @@ namespace TDD
     }
 
     // overloaded to long double
-    inline void confirm(long double const &expected, long double const &actual, int const &line)
+    inline void confirm(long double expected, long double actual, int line)
     {
         if (actual < (expected - 0.000001) ||
             actual > (expected + 0.000001))
@@ -341,19 +371,61 @@ namespace TDD
     }
 
     template <typename T>
-    void confirm(T const &expected, T const &actual, int const &line)
+    void confirm(T const &expected, T const &actual, int line)
     {
         if (actual != expected)
         {
             throw TDD::ActualConfirmException(std::to_string(expected), std::to_string(actual), line);
         }
     }
-
-    inline void runTests()
-    {
-        TestRunner::runAllTests(getTests());
-    }
 } // namespace TDD
+
+// These macros generate unique names for tests using the line number:
+// 1. A class name, like Test7 if the TEST macro is on line 7.
+// 2. An instance name, like test7_inst.
+//
+// This ensures each test has a unique name, allowing multiple tests in the same file.
+
+#define TDD_CLASS_FINAL(line) Test##line
+#define TDD_CLASS_RELAY(line) TDD_CLASS_FINAL(line)
+#define TDD_CLASS TDD_CLASS_RELAY(__LINE__)
+
+#define TDD_INSTANCE_FINAL(line) test##line
+#define TDD_INSTANCE_RELAY(line) TDD_INSTANCE_FINAL(line)
+#define TDD_INSTANCE TDD_INSTANCE_RELAY(__LINE__)
+
+#define TEST(testName)                         \
+    namespace                                  \
+    {                                          \
+        class TDD_CLASS : public TDD::TestBase \
+        {                                      \
+        public:                                \
+            TDD_CLASS(std::string_view name)   \
+                : TestBase(name)               \
+            {                                  \
+            }                                  \
+            void run() override;               \
+        };                                     \
+    } /* end of unnamed namespace */           \
+    TDD_CLASS TDD_INSTANCE(testName);          \
+    void TDD_CLASS::run()
+
+#define TEST_EX(testName, exceptionType)                        \
+    namespace                                                   \
+    {                                                           \
+        class TDD_CLASS : public TDD::TestExBase<exceptionType> \
+        {                                                       \
+        public:                                                 \
+            TDD_CLASS(std::string_view name,                    \
+                      std::string_view exceptionName)           \
+                : TestExBase(name, exceptionName)               \
+            {                                                   \
+            }                                                   \
+            void run() override;                                \
+        };                                                      \
+    } /* end of unnamed namespace */                            \
+    TDD_CLASS TDD_INSTANCE(testName, #exceptionType);           \
+    void TDD_CLASS::run()
 
 #define CONFIRM(expected, actual) \
     TDD::confirm(expected, actual, __LINE__);
@@ -363,48 +435,4 @@ namespace TDD
 
 #define CONFIRM_TRUE(actual) \
     TDD::confirm(true, actual, __LINE__);
-
-#define TEST_EX(testName, exceptionType)                      \
-    namespace                                                 \
-    {                                                         \
-        class TDD_CLASS : public TDD::TestBase                \
-        {                                                     \
-        public:                                               \
-            TDD_CLASS(std::string_view name) : TestBase(name) \
-            {                                                 \
-                TDD::getTests().push_back(this);              \
-            } /* The Test constructor register itself. */     \
-            void runEx() override                             \
-            {                                                 \
-                try                                           \
-                {                                             \
-                    run();                                    \
-                }                                             \
-                catch (exceptionType const &)                 \
-                {                                             \
-                    return;                                   \
-                }                                             \
-                throw TDD::MissingException(#exceptionType);  \
-            }                                                 \
-            void run() override;                              \
-        };                                                    \
-    } /* end of unamed namespace */                           \
-    TDD_CLASS TDD_INSTANCE(testName);                         \
-    void TDD_CLASS::run()
-
-#define TEST(testName)                                        \
-    namespace                                                 \
-    {                                                         \
-        class TDD_CLASS : public TDD::TestBase                \
-        {                                                     \
-        public:                                               \
-            TDD_CLASS(std::string_view name) : TestBase(name) \
-            {                                                 \
-                TDD::getTests().push_back(this);              \
-            } /* The Test constructor register itself. */     \
-            void run() override;                              \
-        };                                                    \
-    } /* end of unamed namespace */                           \
-    TDD_CLASS TDD_INSTANCE(testName);                         \
-    void TDD_CLASS::run()
 #endif // TDD_TEST_H"

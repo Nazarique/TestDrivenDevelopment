@@ -10,7 +10,7 @@ T multipleBy2(T value)
 {
 	return value * 2;
 }
-/*
+
 TEST("Test bool confirms failure")
 {
 	std::string reason = "    Expected: true ";
@@ -26,8 +26,8 @@ TEST("Test int confirms failure")
 	setExpectedFailureReason(reason);
 	int result = multipleBy2(1);
 	CONFIRM(0, result);
-} */
-/*
+}
+
 TEST("Test long confirms")
 {
 	long result = multipleBy2(0L);
@@ -47,8 +47,8 @@ TEST("Test long confirms failure")
 	setExpectedFailureReason(reason);
 	long result = multipleBy2(1L);
 	CONFIRM(0L, result);
-} */
-/*
+}
+
 TEST("Test long long confirms")
 {
 	long long result = multipleBy2(0LL);
@@ -68,8 +68,8 @@ TEST("Test long long confirms failure")
 	setExpectedFailureReason(reason);
 	long long result = multipleBy2(1LL);
 	CONFIRM(0LL, result);
-} */
-/*
+}
+
 TEST("Test string confirms")
 {
 	std::string result = "abc";
@@ -86,8 +86,8 @@ TEST("Test string confirms failure")
 	std::string result = "abc";
 	std::string expected = "def";
 	CONFIRM(expected, result);
-} */
-/*
+}
+
 TEST("Test bool pointer dereference confirms")
 {
 	bool result1 = true;
@@ -103,8 +103,7 @@ TEST("Test string and string literal confirms")
 {
 	std::string result = "abc";
 	CONFIRM("abc", result);
-} */
-
+}
 TEST("Test float confirms")
 {
 	float f1 = 0.1f;
