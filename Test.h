@@ -35,18 +35,29 @@ namespace TDD
         std::string mReason;
     };
 
-    class BoolConfirmException : public ConfirmException
+    class ActualConfirmException : public ConfirmException
     {
-    private:
-        /* data */
     public:
-        BoolConfirmException(bool expected, int line)
+        ActualConfirmException(int actual, int expected, int line)
+            : mExpected(std::to_string(expected)),
+              mActual(std::to_string(actual)),
+              mLine(line)
+        {
+            formatReason();
+        }
+
+    private:
+        void formatReason()
         {
             mReason = "Confirm failed on line ";
-            mReason += std::to_string(line) + "\n";
-            mReason += "    Expected: ";
-            mReason += expected ? "true" : "false";
+            mReason += std::to_string(mLine) + "\n";
+            mReason += "    Expected: " + mExpected + "\n";
+            mReason += "    Actual: " + mActual;
         }
+
+        int mLine;
+        std::string mExpected;
+        std::string mActual;
     };
 
     class MissingException
@@ -248,23 +259,28 @@ namespace TDD
         return tests;
     }
 
+    inline void confirm(bool expected, bool actual, int line)
+    {
+        if (actual != expected)
+        {
+            throw TDD::ActualConfirmException(expected, actual, line);
+        }
+    }
+
     inline void runTests()
     {
         TestRunner::runAllTests(getTests());
     }
 } // namespace TDD
 
-#define CONFIRM_FALSE(actual)                             \
-    if (actual)                                           \
-    {                                                     \
-        throw TDD::BoolConfirmException(false, __LINE__); \
-    }
+#define CONFIRM(expected, actual) \
+    TDD::confirm(expected, actual, __LINE__);
 
-#define CONFIRM_TRUE(actual)                             \
-    if (actual)                                          \
-    {                                                    \
-        throw TDD::BoolConfirmException(true, __LINE__); \
-    }
+#define CONFIRM_FALSE(actual) \
+    TDD::confirm(false, actual, __LINE__);
+
+#define CONFIRM_TRUE(actual) \
+    TDD::confirm(true, actual, __LINE__);
 
 #define TEST_EX(testName, exceptionType)                      \
     namespace                                                 \

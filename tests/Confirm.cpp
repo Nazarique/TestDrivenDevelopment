@@ -1,24 +1,22 @@
 #include "../Test.h"
 
-bool isPassingGrade(const int &value)
+bool isNegative(const int &value)
 {
-    if (value < 60)
-    {
-        return false;
-    }
-
-    return true;
+    return value < 0;
 }
 
-TEST("Test will pass without any confirms")
+int multipleBy2(const int &value)
 {
+    return value * 2;
 }
 
-TEST("Test passing grades")
+TEST("Test bool confirms failure")
 {
-    bool result = isPassingGrade(0);
-    CONFIRM_FALSE(result);
-
-    result = isPassingGrade(100);
+    bool result = isNegative(0);
     CONFIRM_TRUE(result);
+}
+TEST("Test int confirms failure")
+{
+    int result = multipleBy2(1);
+    CONFIRM(0, result);
 }

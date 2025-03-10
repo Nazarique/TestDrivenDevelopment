@@ -25,3 +25,13 @@
 * How to detect whether a test passes or fails.
 * Enhancing the testing library to support confirmations.
 * Should error cases be tested, too?
+
+## Adding More Confirm Types
+* Fixing the bool confirms.
+* Confirming equality.  
+* Changing the code to fix a problem that line numbers are causing with tests failures.
+* Adding more confirm types.
+* Confirming string literals.
+* Confirming floating-point values.
+* How to write confirms.
+
