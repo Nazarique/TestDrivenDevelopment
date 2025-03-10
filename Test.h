@@ -27,21 +27,27 @@ namespace TDD
     class ConfirmException
     {
     public:
-        ConfirmException() = default;
+        ConfirmException(int line)
+            : mLine(line) {}
+
         virtual ~ConfirmException() = default;
+
         std::string_view reason() const { return mReason; }
 
+        int line() const { return mLine; }
+
     protected:
+        int mLine;
         std::string mReason;
     };
 
     class ActualConfirmException : public ConfirmException
     {
     public:
-        ActualConfirmException(int actual, int expected, int line)
-            : mExpected(std::to_string(expected)),
-              mActual(std::to_string(actual)),
-              mLine(line)
+        ActualConfirmException(int expected, int actual, int line)
+            : ConfirmException(line),
+              mExpected(std::to_string(expected)),
+              mActual(std::to_string(actual))
         {
             formatReason();
         }
@@ -49,15 +55,22 @@ namespace TDD
     private:
         void formatReason()
         {
-            mReason = "Confirm failed on line ";
-            mReason += std::to_string(mLine) + "\n";
             mReason += "    Expected: " + mExpected + "\n";
             mReason += "    Actual: " + mActual;
         }
-
         int mLine;
         std::string mExpected;
         std::string mActual;
+    };
+
+    class BoolConfirmException : public ConfirmException
+    {
+    public:
+        BoolConfirmException(bool expected, int line) : ConfirmException(line)
+        {
+            mReason += "    Expected: ";
+            mReason += expected ? "true " : "false ";
+        }
     };
 
     class MissingException
@@ -74,7 +87,10 @@ namespace TDD
     class TestBase
     {
     public:
-        TestBase(std::string_view name) : mName(name), mPassed(true) {}
+        TestBase(std::string_view name)
+            : mName(name),
+              mPassed(true),
+              mConfirmLocation(-1) {}
 
         virtual ~TestBase() = default;
 
@@ -91,12 +107,15 @@ namespace TDD
 
         bool passed() const { return mPassed; }
 
+        int confirmLocation() const { return mConfirmLocation; }
+
         std::string_view expectedReason() const { return mExpectedReason; }
 
-        void setFailed(std::string_view reason)
+        void setFailed(std::string_view reason, int confirmLocation = -1)
         {
             mPassed = false;
             mReason = reason;
+            mConfirmLocation = confirmLocation;
         }
 
         void setExpectedFailureReason(std::string_view reason)
@@ -106,6 +125,7 @@ namespace TDD
 
     private:
         bool mPassed;
+        int mConfirmLocation;
         std::string mName;
         std::string mReason;
         std::string mExpectedReason;
@@ -165,7 +185,7 @@ namespace TDD
 
         static void handleConfirmException(TestBase *test, const ConfirmException &ex)
         {
-            test->setFailed(ex.reason());
+            test->setFailed(ex.reason(), ex.line());
         }
 
         static void handleUnexpectedException(TestBase *test)
@@ -229,9 +249,17 @@ namespace TDD
             }
             else
             {
+                if (test->confirmLocation() != -1)
+                {
+                    *outStream << "Failed confirm on line "
+                               << test->confirmLocation() << std::endl;
+                }
+                else
+                {
+                    *outStream << "Failed\n";
+                }
                 ++counters.failed;
-                *outStream << "Failed\n"
-                           << test->reason() << std::endl;
+                *outStream << test->reason() << std::endl;
             }
         }
 
@@ -260,6 +288,14 @@ namespace TDD
     }
 
     inline void confirm(bool expected, bool actual, int line)
+    {
+        if (actual != expected)
+        {
+            throw TDD::BoolConfirmException(expected, line);
+        }
+    }
+
+    inline void confirm(int expected, int actual, int line)
     {
         if (actual != expected)
         {
