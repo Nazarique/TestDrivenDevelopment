@@ -295,6 +295,21 @@ namespace TDD
         }
     }
 
+    // overloaded to string_view
+    inline void confirm(std::string_view expected, std::string_view actual, int line)
+    {
+        if (actual != expected)
+        {
+            throw TDD::ActualConfirmException(expected, actual, line);
+        }
+    }
+
+    // overloaded to strings
+    inline void confirm(std::string const &expected, std::string const &actual, int line)
+    {
+        confirm(std::string_view(expected), std::string_view(actual), line);
+    }
+
     template <typename T>
     inline void confirm(T const &expected, T const &actual, int line)
     {
