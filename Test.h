@@ -44,10 +44,10 @@ namespace TDD
     class ActualConfirmException : public ConfirmException
     {
     public:
-        ActualConfirmException(int expected, int actual, int line)
+        ActualConfirmException(std::string_view expected, std::string_view actual, int line)
             : ConfirmException(line),
-              mExpected(std::to_string(expected)),
-              mActual(std::to_string(actual))
+              mExpected(expected),
+              mActual(actual)
         {
             formatReason();
         }
@@ -295,7 +295,8 @@ namespace TDD
         }
     }
 
-    inline void confirm(int expected, int actual, int line)
+    template <typename T>
+    T confirm(T expected, T actual, T line)
     {
         if (actual != expected)
         {
