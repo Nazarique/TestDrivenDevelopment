@@ -296,11 +296,11 @@ namespace TDD
     }
 
     template <typename T>
-    T confirm(T expected, T actual, T line)
+    inline void confirm(T const &expected, T const &actual, int line)
     {
         if (actual != expected)
         {
-            throw TDD::ActualConfirmException(expected, actual, line);
+            throw TDD::ActualConfirmException(std::to_string(expected), std::to_string(actual), line);
         }
     }
 

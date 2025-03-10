@@ -9,7 +9,7 @@ long multipleBy2(long value)
 {
 	return value * 2;
 }
-/*
+
 TEST("Test bool confirms failure")
 {
 	std::string reason = "    Expected: true ";
@@ -25,7 +25,7 @@ TEST("Test int confirms failure")
 	setExpectedFailureReason(reason);
 	int result = multipleBy2(1);
 	CONFIRM(0, result);
-} */
+}
 
 TEST("Test long confirms")
 {
@@ -37,4 +37,13 @@ TEST("Test long confirms")
 
 	result = multipleBy2(-1L);
 	CONFIRM(-2L, result);
+}
+
+TEST("Test long confirms failure")
+{
+	std::string reason = "    Expected: 0\n";
+	reason += "    Actual: 2";
+	setExpectedFailureReason(reason);
+	long result = multipleBy2(1L);
+	CONFIRM(0L, result);
 }
