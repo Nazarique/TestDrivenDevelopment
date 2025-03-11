@@ -203,96 +203,111 @@ namespace TDD
             TestCounters counters;
             *outStream << "Running " << getTests().size() << " test suites\n";
 
-            for (auto const &[key, value] : getTests())
+            for (auto const &[suiteName, tests] : getTests())
             {
-                std::string suiteDisplayName = "Suite: ";
+                printSuiteHeader(suiteName);
 
-                if (key.empty())
+                if (isSuiteNotFound(suiteName))
                 {
-                    suiteDisplayName += "Single Tests";
+                    return ++counters.failed;
                 }
-                else
+
+                if (!runSuiteSetup(suiteName, counters))
                 {
-                    suiteDisplayName += key;
+                    continue;
                 }
-                *outStream << "------------------ "
-                           << suiteDisplayName << std::endl;
-                if (not key.empty())
-                {
-                    if (not getTestSuites().contains(key))
-                    {
-                        *outStream << "Test suite is not found."
-                                   << " Exiting test application." << std::endl;
-                        return ++counters.failed;
-                    }
-                    if (not runSuite(true, key, counters))
-                    {
-                        *outStream << "Test suite setup failed."
-                                   << " Skiping tests in suite." << std::endl;
-                        continue;
-                    }
-                }
-                for (auto *test : value)
+
+                for (auto *test : tests)
                 {
                     runTest(test, counters);
                 }
-                if (not key.empty())
-                {
-                    if (not runSuite(false, key, counters))
-                    {
-                        *outStream << "Test suite teardown failed."
-                                   << " Skiping tests in suite." << std::endl;
-                    }
-                }
+
+                runSuiteTeardown(suiteName, counters);
             }
 
             printTestSummary(counters);
             return counters.failed;
         }
 
-        static void runTest(Test *test, TestCounters &counters)
+    private:
+        static void printSuiteHeader(const std::string_view suiteName)
         {
-            *outStream << "------------ Test: "
-                       << test->name() << std::endl;
-            handleTest(test);
-            updateTestCounters(test, counters);
+            std::string suiteDisplayName = "Suite: ";
+            suiteDisplayName += suiteName.empty() ? "Single Tests" : suiteName;
+
+            *outStream << "------------------ " << suiteDisplayName << std::endl;
         }
 
-        static inline bool runSuite(bool setup, std::string const &name, TestCounters &counters)
+        static void printTestSummary(const TestCounters &counters)
         {
-            for (auto &suite : getTestSuites()[name])
+            std::string suiteDisplayName = "-------------------------\n";
+
+            suiteDisplayName += "Tests passed: " + counters.passed;
+            suiteDisplayName += "\nTests failed: " + counters.failed;
+
+            if (counters.missedFailures != 0)
             {
-                if (setup)
-                {
-                    *outStream << "------------ Setup: ";
-                }
-                else
-                {
-                    *outStream << "------------ Teardown: ";
-                }
-                *outStream << suite->name() << std::endl;
-                handleSuite(suite, setup);
-                if (isSuiteFailed(suite, counters))
-                {
-                    return false;
-                }
+                suiteDisplayName += "\nMissed failures: " + counters.missedFailures;
+            }
+            *outStream << suiteDisplayName << std::endl;
+        }
+
+        static bool isSuiteNotFound(const std::string &suiteName)
+        {
+            if (not suiteName.empty() && not getTestSuites().contains(suiteName))
+            {
+                *outStream << "Test suite is not found. Exiting test application." << std::endl;
+                return true;
+            }
+            return false;
+        }
+
+        static bool runSuiteSetup(const std::string &suiteName, TestCounters &counters)
+        {
+            if (not suiteName.empty() && not runSuite(true, suiteName, counters))
+            {
+                *outStream << "Test suite setup failed. Skipping tests in suite." << std::endl;
+                return false;
             }
             return true;
         }
 
-    private:
-        static void printTestSummary(const TestCounters &counters)
+        static bool runSuiteTeardown(const std::string &suiteName, TestCounters &counters)
         {
-            *outStream << "-------------------------" << std::endl;
-
-            *outStream << "Tests passed: " << counters.passed
-                       << "\nTests failed: " << counters.failed;
-
-            if (counters.missedFailures != 0)
+            if (not suiteName.empty() && not runSuite(false, suiteName, counters))
             {
-                *outStream << "\nMissed failures: " << counters.missedFailures;
+                *outStream << "Test suite teardown failed. Skipping tests in suite." << std::endl;
+                return false;
             }
-            *outStream << std::endl;
+            return true;
+        }
+
+        static void runTest(Test *test, TestCounters &counters)
+        {
+            *outStream << "------------ Test: " << test->name() << std::endl;
+            handleTest(test);
+            updateTestCounters(test, counters);
+        }
+
+        static bool runSuite(bool setup, std::string const &name, TestCounters &counters)
+        {
+            bool result = false;
+            std::string suiteMode;
+            for (auto &suite : getTestSuites()[name])
+            {
+                if (setup)
+                {
+                    suiteMode = "------------ Setup: ";
+                }
+                else
+                {
+                    suiteMode = "------------ Teardown: ";
+                }
+                *outStream << suiteMode << suite->name() << std::endl;
+                handleSuite(suite, setup);
+                return isSuitePassed(suite, counters);
+            }
+            return result;
         }
 
         static void handleMissingException(TestBase *test, const MissingException &ex)
@@ -373,8 +388,7 @@ namespace TDD
             {
                 ++counters.missedFailures;
                 *outStream << "Missed expected failure\n"
-                           << "Test passed but was expected to fail."
-                           << std::endl;
+                           << "Test passed but was expected to fail." << std::endl;
             }
             else
             {
@@ -411,15 +425,15 @@ namespace TDD
             }
         }
 
-        static bool isSuiteFailed(TestSuite *suite, TestCounters &counters)
+        static bool isSuitePassed(TestSuite *suite, TestCounters &counters)
         {
-            if (not suite->passed())
+            if (suite->passed())
             {
-                verifyConfirmLocation(suite, counters);
+                ++counters.passed;
+                *outStream << "Passed" << std::endl;
                 return true;
             }
-            ++counters.passed;
-            *outStream << "Passed" << std::endl;
+            verifyConfirmLocation(suite, counters);
             return false;
         }
 
