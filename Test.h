@@ -73,7 +73,7 @@ namespace TDD
         BoolConfirmException(bool expected, int line) : ConfirmException(line)
         {
             mReason += "    Expected: ";
-            mReason += expected ? "true " : "false ";
+            mReason += expected ? "true" : "false";
         }
     };
 
