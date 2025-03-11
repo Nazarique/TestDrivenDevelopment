@@ -1,6 +1,7 @@
 #ifndef TDD_TEST_H
 #define TDD_TEST_H
 
+#include <map>
 #include <string_view>
 #include <ostream>
 #include <vector>
@@ -16,10 +17,15 @@ namespace TDD
     class BoolConfirmException;
     class MissingException;
     class TestBase;
-    class TestRunner;
+    class Runner;
+    class Test;
+    class TestSuite;
 
     inline void setOutStream(std::ostream &os);
-    inline std::vector<TestBase *> &getTests();
+    inline std::map<std::string, std::vector<Test *>> &getTests();
+    inline std::map<std::string, std::vector<TestSuite *>> &getTestSuites();
+    inline void addTest(std::string_view suiteName, Test *test);
+    inline void addTestSuite(std::string_view suiteName, TestSuite *suite);
     inline void runTests();
 
     class ConfirmException
@@ -85,31 +91,23 @@ namespace TDD
     class TestBase
     {
     public:
-        TestBase(std::string_view name)
+        TestBase(std::string_view name, std::string_view suiteName)
             : mName(name),
-              mPassed(true), mConfirmLocation(-1)
-        {
-            getTests().push_back(this);
-        }
+              mSuiteName(suiteName),
+              mPassed(true),
+              mConfirmLocation(-1) {}
 
         virtual ~TestBase() = default;
 
-        virtual void run() = 0;
-
-        virtual void runEx()
-        {
-            run();
-        }
-
         std::string_view name() const { return mName; }
+
+        std::string_view suiteName() const { return mSuiteName; }
 
         std::string_view reason() const { return mReason; }
 
         bool passed() const { return mPassed; }
 
         int confirmLocation() const { return mConfirmLocation; }
-
-        std::string_view expectedReason() const { return mExpectedReason; }
 
         void setFailed(std::string_view reason, int confirmLocation = -1)
         {
@@ -118,25 +116,47 @@ namespace TDD
             mConfirmLocation = confirmLocation;
         }
 
+    private:
+        std::string mName;
+        std::string mSuiteName;
+        std::string mReason;
+        bool mPassed;
+        int mConfirmLocation;
+    };
+
+    class Test : public TestBase
+    {
+    public:
+        Test(std::string_view name, std::string_view suiteName)
+            : TestBase(name, suiteName)
+        {
+            addTest(suiteName, this);
+        }
+        virtual void runEx()
+        {
+            run();
+        }
+        virtual void run() = 0;
+
+        std::string_view expectedReason() const { return mExpectedReason; }
+
         void setExpectedFailureReason(std::string_view reason)
         {
             mExpectedReason = reason;
         }
 
     private:
-        bool mPassed;
-        int mConfirmLocation;
         std::string mName;
-        std::string mReason;
+        std::string mSuiteName;
         std::string mExpectedReason;
     };
 
     template <typename ExceptionT>
-    class TestExBase : public TestBase
+    class TestEx : public Test
     {
     public:
-        TestExBase(std::string_view name, std::string_view exceptionName)
-            : TestBase(name), mExceptionName(exceptionName) {}
+        TestEx(std::string_view name, std::string_view suiteName, std::string_view exceptionName)
+            : Test(name, suiteName), mExceptionName(exceptionName) {}
 
         void runEx() override
         {
@@ -155,25 +175,20 @@ namespace TDD
         std::string_view mExceptionName;
     };
 
-    class TestRunner
+    class TestSuite : public TestBase
     {
     public:
-        static void runAllTests(std::vector<TestBase *> allTests)
+        TestSuite(std::string_view name, std::string_view suiteName)
+            : TestBase(name, suiteName)
         {
-            TestCounters counters;
-            *outStream << "Running " << allTests.size() << " tests\n";
-
-            for (auto *test : allTests)
-            {
-                *outStream << "-------------------------\n"
-                           << test->name() << std::endl;
-                handleTest(test);
-                updateTestCounters(test, counters);
-            }
-
-            printTestSummary(counters);
+            addTestSuite(suiteName, this);
         }
+        virtual void suiteSetup() = 0;
+        virtual void suiteTeardown() = 0;
+    };
 
+    class Runner
+    {
     private:
         struct TestCounters
         {
@@ -182,20 +197,102 @@ namespace TDD
             int missedFailures = 0;
         };
 
+    public:
+        static int runAllTests()
+        {
+            TestCounters counters;
+            *outStream << "Running " << getTests().size() << " test suites\n";
+
+            for (auto const &[key, value] : getTests())
+            {
+                std::string suiteDisplayName = "Suite: ";
+
+                if (key.empty())
+                {
+                    suiteDisplayName += "Single Tests";
+                }
+                else
+                {
+                    suiteDisplayName += key;
+                }
+                *outStream << "------------------ "
+                           << suiteDisplayName << std::endl;
+                if (not key.empty())
+                {
+                    if (not getTestSuites().contains(key))
+                    {
+                        *outStream << "Test suite is not found."
+                                   << " Exiting test application." << std::endl;
+                        return ++counters.failed;
+                    }
+                    if (not runSuite(true, key, counters))
+                    {
+                        *outStream << "Test suite setup failed."
+                                   << " Skiping tests in suite." << std::endl;
+                        continue;
+                    }
+                }
+                for (auto *test : value)
+                {
+                    runTest(test, counters);
+                }
+                if (not key.empty())
+                {
+                    if (not runSuite(false, key, counters))
+                    {
+                        *outStream << "Test suite teardown failed."
+                                   << " Skiping tests in suite." << std::endl;
+                    }
+                }
+            }
+
+            printTestSummary(counters);
+            return counters.failed;
+        }
+
+        static void runTest(Test *test, TestCounters &counters)
+        {
+            *outStream << "------------ Test: "
+                       << test->name() << std::endl;
+            handleTest(test);
+            updateTestCounters(test, counters);
+        }
+
+        static inline bool runSuite(bool setup, std::string const &name, TestCounters &counters)
+        {
+            for (auto &suite : getTestSuites()[name])
+            {
+                if (setup)
+                {
+                    *outStream << "------------ Setup: ";
+                }
+                else
+                {
+                    *outStream << "------------ Teardown: ";
+                }
+                *outStream << suite->name() << std::endl;
+                handleSuite(suite, setup);
+                if (isSuiteFailed(suite, counters))
+                {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+    private:
         static void printTestSummary(const TestCounters &counters)
         {
             *outStream << "-------------------------" << std::endl;
-            if (counters.failed == 0)
+
+            *outStream << "Tests passed: " << counters.passed
+                       << "\nTests failed: " << counters.failed;
+
+            if (counters.missedFailures != 0)
             {
-                *outStream << "All tests passed." << std::endl;
+                *outStream << "\nMissed failures: " << counters.missedFailures;
             }
-            else
-            {
-                *outStream << "Tests passed: " << counters.passed
-                           << "\nTests failed: " << counters.failed
-                           << "\nMissed failures: " << counters.missedFailures
-                           << std::endl;
-            }
+            *outStream << std::endl;
         }
 
         static void handleMissingException(TestBase *test, const MissingException &ex)
@@ -217,7 +314,7 @@ namespace TDD
             test->setFailed("Unexpected exception thrown.");
         }
 
-        static void handleTest(TestBase *test)
+        static void handleTest(Test *test)
         {
             try
             {
@@ -237,17 +334,40 @@ namespace TDD
             }
         }
 
-        static bool isExpectedFailure(const TestBase *test)
+        static void handleSuite(TestSuite *suite, bool setup)
+        {
+            try
+            {
+                if (setup)
+                {
+                    suite->suiteSetup();
+                }
+                else
+                {
+                    suite->suiteTeardown();
+                }
+            }
+            catch (const ConfirmException &ex)
+            {
+                handleConfirmException(suite, ex);
+            }
+            catch (...)
+            {
+                handleUnexpectedException(suite);
+            }
+        }
+
+        static bool isExpectedFailure(const Test *test)
         {
             return (not test->expectedReason().empty()) && test->expectedReason() == test->reason();
         }
 
-        static bool isMissedExpectedFailure(const TestBase *test)
+        static bool isMissedExpectedFailure(const Test *test)
         {
             return not test->expectedReason().empty();
         }
 
-        static void verifyPassedTest(const TestBase *test, TestCounters &counters)
+        static void verifyPassedTest(const Test *test, TestCounters &counters)
         {
             if (isMissedExpectedFailure(test))
             {
@@ -263,7 +383,21 @@ namespace TDD
             }
         }
 
-        static void verifyFailedTest(const TestBase *test, TestCounters &counters)
+        static void verifyConfirmLocation(const TestBase *test, TestCounters &counters)
+        {
+            ++counters.failed;
+            if (test->confirmLocation() != -1)
+            {
+                *outStream << "Failed confirm on line " << test->confirmLocation() << std::endl;
+            }
+            else
+            {
+                *outStream << "Failed\n";
+            }
+            *outStream << test->reason() << std::endl;
+        }
+
+        static void verifyFailedTest(const Test *test, TestCounters &counters)
         {
             if (isExpectedFailure(test))
             {
@@ -273,21 +407,23 @@ namespace TDD
             }
             else
             {
-                if (test->confirmLocation() != -1)
-                {
-                    *outStream << "Failed confirm on line "
-                               << test->confirmLocation() << std::endl;
-                }
-                else
-                {
-                    *outStream << "Failed\n";
-                }
-                ++counters.failed;
-                *outStream << test->reason() << std::endl;
+                verifyConfirmLocation(test, counters);
             }
         }
 
-        static void updateTestCounters(TestBase *test, TestCounters &counters)
+        static bool isSuiteFailed(TestSuite *suite, TestCounters &counters)
+        {
+            if (not suite->passed())
+            {
+                verifyConfirmLocation(suite, counters);
+                return true;
+            }
+            ++counters.passed;
+            *outStream << "Passed" << std::endl;
+            return false;
+        }
+
+        static void updateTestCounters(Test *test, TestCounters &counters)
         {
             if (test->passed())
             {
@@ -315,21 +451,60 @@ namespace TDD
         }
     };
 
+    template <typename T>
+    class TestSuiteSetupAndTeardown : public T, public TestSuite
+    {
+    public:
+        TestSuiteSetupAndTeardown(std::string_view name, std::string_view suite)
+            : TestSuite(name, suite) {}
+
+        void suiteSetup() override { T::setup(); }
+
+        void suiteTeardown() override { T::teardown(); }
+    };
+
     inline void setOutStream(std::ostream &os)
     {
         outStream = &os;
     }
 
-    inline std::vector<TestBase *> &getTests()
+    inline std::map<std::string, std::vector<Test *>> &getTests()
     {
-        static std::vector<TestBase *> tests;
+        static std::map<std::string, std::vector<Test *>> tests;
 
         return tests;
     }
 
+    inline std::map<std::string, std::vector<TestSuite *>> &getTestSuites()
+    {
+        static std::map<std::string, std::vector<TestSuite *>> suites;
+
+        return suites;
+    }
+
+    inline void addTest(std::string_view suiteName, Test *test)
+    {
+        std::string name(suiteName);
+        if (not getTests().contains(name))
+        {
+            getTests().try_emplace(name, std::vector<Test *>());
+        }
+        getTests()[name].push_back(test);
+    }
+
+    inline void addTestSuite(std::string_view suiteName, TestSuite *suite)
+    {
+        std::string name(suiteName);
+        if (not getTestSuites().contains(name))
+        {
+            getTestSuites().try_emplace(name, std::vector<TestSuite *>());
+        }
+        getTestSuites()[name].push_back(suite);
+    }
+
     inline void runTests()
     {
-        TestRunner::runAllTests(getTests());
+        Runner::runAllTests();
     }
 
     inline void confirm(bool expected, bool actual, int line)
@@ -409,37 +584,61 @@ namespace TDD
 #define TDD_INSTANCE_RELAY(line) TDD_INSTANCE_FINAL(line)
 #define TDD_INSTANCE TDD_INSTANCE_RELAY(__LINE__)
 
-#define TEST(testName)                         \
-    namespace                                  \
-    {                                          \
-        class TDD_CLASS : public TDD::TestBase \
-        {                                      \
-        public:                                \
-            TDD_CLASS(std::string_view name)   \
-                : TestBase(name)               \
-            {                                  \
-            }                                  \
-            void run() override;               \
-        };                                     \
-    } /* end of unnamed namespace */           \
-    TDD_CLASS TDD_INSTANCE(testName);          \
+#define TEST(testName)                       \
+    namespace                                \
+    {                                        \
+        class TDD_CLASS : public TDD::Test   \
+        {                                    \
+        public:                              \
+            TDD_CLASS(std::string_view name) \
+                : Test(name, "") {}          \
+            void run() override;             \
+        };                                   \
+    } /* end of unnamed namespace */         \
+    TDD_CLASS TDD_INSTANCE(testName);        \
     void TDD_CLASS::run()
 
-#define TEST_EX(testName, exceptionType)                        \
-    namespace                                                   \
-    {                                                           \
-        class TDD_CLASS : public TDD::TestExBase<exceptionType> \
-        {                                                       \
-        public:                                                 \
-            TDD_CLASS(std::string_view name,                    \
-                      std::string_view exceptionName)           \
-                : TestExBase(name, exceptionName)               \
-            {                                                   \
-            }                                                   \
-            void run() override;                                \
-        };                                                      \
-    } /* end of unnamed namespace */                            \
-    TDD_CLASS TDD_INSTANCE(testName, #exceptionType);           \
+#define TEST_EX(testName, exceptionType)                    \
+    namespace                                               \
+    {                                                       \
+        class TDD_CLASS : public TDD::TestEx<exceptionType> \
+        {                                                   \
+        public:                                             \
+            TDD_CLASS(std::string_view name,                \
+                      std::string_view exceptionName)       \
+                : TestEx(name, "", exceptionName) {}        \
+            void run() override;                            \
+        };                                                  \
+    } /* end of unnamed namespace */                        \
+    TDD_CLASS TDD_INSTANCE(testName, #exceptionType);       \
+    void TDD_CLASS::run()
+
+#define TEST_SUITE(testName, suiteName)                              \
+    namespace                                                        \
+    {                                                                \
+        class TDD_CLASS : public TDD::Test                           \
+        {                                                            \
+        public:                                                      \
+            TDD_CLASS(std::string_view name, std::string_view suite) \
+                : Test(name, suite) {}                               \
+            void run() override;                                     \
+        };                                                           \
+    } /* end of unnamed namespace */                                 \
+    TDD_CLASS TDD_INSTANCE(testName, suiteName);                     \
+    void TDD_CLASS::run()
+
+#define TEST_SUITE_EX(testName, suiteName, exceptionType)                                            \
+    namespace                                                                                        \
+    {                                                                                                \
+        class TDD_CLASS : public TDD::TestEx<exceptionType>                                          \
+        {                                                                                            \
+        public:                                                                                      \
+            TDD_CLASS(std::string_view name, std::string_view suite, std::string_view exceptionName) \
+                : TestEx(name, suite, exceptionName) {}                                              \
+            void run() override;                                                                     \
+        };                                                                                           \
+    } /* end of unnamed namespace */                                                                 \
+    TDD_CLASS TDD_INSTANCE(testName, suiteName, #exceptionType);                                     \
     void TDD_CLASS::run()
 
 #define CONFIRM(expected, actual) \

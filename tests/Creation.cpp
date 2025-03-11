@@ -1,6 +1,5 @@
 #include "../Test.h"
-/*
-TEST("Test can be created")
+/* TEST("Test can be created")
 {
 }
 
