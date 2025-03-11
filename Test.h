@@ -240,16 +240,16 @@ namespace TDD
 
         static void printTestSummary(const TestCounters &counters)
         {
-            std::string suiteDisplayName = "-------------------------\n";
+            *outStream << "-------------------------" << std::endl;
 
-            suiteDisplayName += "Tests passed: " + counters.passed;
-            suiteDisplayName += "\nTests failed: " + counters.failed;
+            *outStream << "Tests passed: " << counters.passed
+                       << "\nTests failed: " << counters.failed;
 
             if (counters.missedFailures != 0)
             {
-                suiteDisplayName += "\nMissed failures: " + counters.missedFailures;
+                *outStream << "\nMissed failures: " << counters.missedFailures;
             }
-            *outStream << suiteDisplayName << std::endl;
+            *outStream << std::endl;
         }
 
         static bool isSuiteNotFound(const std::string &suiteName)
@@ -291,21 +291,23 @@ namespace TDD
 
         static bool runSuite(bool setup, std::string const &name, TestCounters &counters)
         {
-            bool result = false;
-            std::string suiteMode;
+            bool result = true;
             for (auto &suite : getTestSuites()[name])
             {
                 if (setup)
                 {
-                    suiteMode = "------------ Setup: ";
+                    *outStream << "------------ Setup: ";
                 }
                 else
                 {
-                    suiteMode = "------------ Teardown: ";
+                    *outStream << "------------ Teardown: ";
                 }
-                *outStream << suiteMode << suite->name() << std::endl;
+                *outStream << suite->name() << std::endl;
                 handleSuite(suite, setup);
-                return isSuitePassed(suite, counters);
+                if (isSuiteFailed(suite, counters))
+                {
+                    return false;
+                }
             }
             return result;
         }
@@ -425,15 +427,15 @@ namespace TDD
             }
         }
 
-        static bool isSuitePassed(TestSuite *suite, TestCounters &counters)
+        static bool isSuiteFailed(TestSuite *suite, TestCounters &counters)
         {
-            if (suite->passed())
+            if (not suite->passed())
             {
-                ++counters.passed;
-                *outStream << "Passed" << std::endl;
+                verifyConfirmLocation(suite, counters);
                 return true;
             }
-            verifyConfirmLocation(suite, counters);
+            ++counters.passed;
+            *outStream << "Passed" << std::endl;
             return false;
         }
 
